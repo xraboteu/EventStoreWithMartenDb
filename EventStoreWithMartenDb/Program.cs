@@ -3,6 +3,7 @@ using Marten.Events;
 using Marten.Events.Projections;
 using Marten.Services.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Weasel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -91,5 +92,19 @@ app.MapPost("/update", async (UpdateUserRequest updatedUser, [FromServices] IDoc
     await session.SaveChangesAsync(cancellationToken);
     user.ClearEventsOnceCommitted();
 });
+
+app.MapGet("/user-events", async ([FromServices] IDocumentSession session, Guid userId, CancellationToken cancellationToken) =>
+{
+    var items = await session.Events.FetchStreamAsync(userId, token: cancellationToken);
+    return items.Select(_ => new
+    {
+        _.Data,
+        _.Version,
+    }).ToArray();
+});
+
+//TODO: Add a route to update user phone number
+
+//TODO: Add a route to delete a user
 
 app.Run();
