@@ -116,4 +116,3 @@ app.MapGet("/user-events", async ([FromServices] IDocumentSession session, Guid 
 //TODO: Add a route to delete a user
 
 app.Run();
-public record UserIds(Guid id);
