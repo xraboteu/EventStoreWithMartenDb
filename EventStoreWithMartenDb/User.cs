@@ -2,9 +2,10 @@ using Newtonsoft.Json;
 
 public class User
 {
-    public Guid Id { get; private set; }
-    public string FirstName { get; private set; }
-    public string LastName { get; private set; }
+    private readonly Guid _id;
+    public Guid Id { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
 
     private readonly List<object> _eventsToCommit = new();
 
@@ -15,11 +16,13 @@ public class User
         _eventsToCommit.Clear();
     }
 
-    public long Version { get; private set; }
+    public long Version { get; set; }
+
+    public User(){}
 
     public User(string firstName, string lastName)
     {
-        Id = Guid.NewGuid();
+        _id = Id = Guid.NewGuid();
         FirstName = firstName;
         LastName = lastName;
 

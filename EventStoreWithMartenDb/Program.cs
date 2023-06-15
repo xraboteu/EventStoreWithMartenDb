@@ -1,6 +1,7 @@
 using Marten;
 using Marten.Events;
 using Marten.Events.Projections;
+using Marten.Linq.SoftDeletes;
 using Marten.Services.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -66,12 +67,19 @@ app.MapPost("/add", async (CreateUserRequest create, [FromServices] IDocumentSes
     user.ClearEventsOnceCommitted();
 });
 
-app.MapGet("/users", async ([FromServices] IQuerySession session, CancellationToken cancellationToken) =>
+app.MapGet("/users-projection", async ([FromServices] IQuerySession session, CancellationToken cancellationToken) =>
 {
     return await session.Query<UserSummaryView>()
         .OrderBy(_ => _.LastName)
         .ToListAsync(cancellationToken);
 });
+
+app.MapGet("/users-aggregates", async ([FromServices] IDocumentSession session, CancellationToken cancellationToken) =>
+{
+    var users = await session.Query<User>().ToListAsync();
+    return users;
+});
+
 
 
 app.MapGet("/user", async ([FromServices] IDocumentSession session, Guid userId, CancellationToken ct) =>
@@ -108,3 +116,4 @@ app.MapGet("/user-events", async ([FromServices] IDocumentSession session, Guid 
 //TODO: Add a route to delete a user
 
 app.Run();
+public record UserIds(Guid id);
