@@ -5,7 +5,7 @@ public class UserProjection : EventProjection
 {
     public UserProjection()
     {
-        ProjectAsync<UserCreated>(async (@event, ops) =>
+        ProjectAsync<UserRegistered>(async (@event, ops) =>
         {
             await using var session = ops.DocumentStore.LightweightSession();
             var user = new UserSummaryView

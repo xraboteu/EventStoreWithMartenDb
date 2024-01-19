@@ -27,18 +27,18 @@ public class User
         LastName = lastName;
 
         // create the event
-        var userCreatedEvent = new UserCreated();
-        userCreatedEvent.Id = Id;
-        userCreatedEvent.FirstName = FirstName;
-        userCreatedEvent.LastName = LastName;
-        userCreatedEvent.Created = DateTime.Now;
-
-
+        var userCreatedEvent = new UserRegistered
+        {
+            Id = Id,
+            FirstName = FirstName,
+            LastName = LastName,
+            Created = DateTime.UtcNow
+        };
         Version++;
         _eventsToCommit.Add(userCreatedEvent);
     }
 
-    public User(UserCreated src)
+    public User(UserRegistered src)
     {
         Id = src.Id;
         FirstName = src.FirstName;
@@ -48,11 +48,16 @@ public class User
 
     public void ChangeName(string firstName, string lastName)
     {
-        var userChangedNameEvent = new UserNameChanged();
-        userChangedNameEvent.Id = Id;
-        userChangedNameEvent.FirstName =
-            string.Equals(FirstName.ToLower(), firstName.ToLower(), StringComparison.InvariantCultureIgnoreCase) ? FirstName : firstName;
-        userChangedNameEvent.LastName = string.Equals(LastName, lastName, StringComparison.CurrentCultureIgnoreCase) ? LastName : lastName;
+        var userChangedNameEvent = new UserNameChanged
+        {
+            Id = Id,
+            FirstName = string.Equals(FirstName.ToLower(), 
+                        firstName.ToLower(), 
+                        StringComparison.InvariantCultureIgnoreCase) ? FirstName : firstName,
+            LastName = string.Equals(LastName, 
+                            lastName, 
+                            StringComparison.CurrentCultureIgnoreCase) ? LastName : lastName
+        };
 
         Apply(userChangedNameEvent);
         _eventsToCommit.Add(userChangedNameEvent);
@@ -62,7 +67,7 @@ public class User
     {
         FirstName = @event.FirstName;
         LastName = @event.LastName;
-        @event.ModifiacationDate = DateTime.Now;
+        @event.ModifiacationDate = DateTime.UtcNow;
         Version++;
     }
 

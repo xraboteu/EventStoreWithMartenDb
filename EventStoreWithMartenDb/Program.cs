@@ -1,10 +1,8 @@
 using Marten;
 using Marten.Events;
 using Marten.Events.Projections;
-using Marten.Linq.SoftDeletes;
 using Marten.Services.Json;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Weasel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +16,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddMarten(options =>
 {
     // Establish the connection string to your Marten database
-    options.Connection(builder.Configuration.GetConnectionString("Marten")!);
+    options.Connection(@"User ID=admin;Password=demo-postgresql;
+                        Database=postgres_demo_db;Host=localhost;
+                        Port=5435;Pooling=true;
+                        Maximum Pool Size=200;
+                        Connection Lifetime=0;");
 
     // If we're running in development mode, let Marten just take care
     // of all necessary schema building and patching behind the scenes
@@ -36,7 +38,7 @@ builder.Services.AddMarten(options =>
             notNull: false);
 
     options.Projections.Add<UserProjection>(ProjectionLifecycle.Inline);
-    options.Events.AddEventType(typeof(UserCreated));
+    options.Events.AddEventType(typeof(UserRegistered));
     options.Events.AddEventType(typeof(UserNameChanged));
 
     options.Logger(new ConsoleMartenLogger());
@@ -67,7 +69,23 @@ app.MapPost("/add", async (CreateUserRequest create, [FromServices] IDocumentSes
     user.ClearEventsOnceCommitted();
 });
 
-app.MapGet("/users-projection", async ([FromServices] IQuerySession session, CancellationToken cancellationToken) =>
+app.MapPost("/update", async (UpdateUserRequest updatedUser,
+    [FromServices] IDocumentSession session, CancellationToken cancellationToken) =>
+{
+    var user = await session.Events.AggregateStreamAsync<User>(updatedUser.Id, token: cancellationToken);
+
+    user?.ChangeName(updatedUser.FirstName, updatedUser.LastName);
+
+    var events = user?.EventsToCommit.ToArray();
+    session.Events.Append(user.Id, user.Version, events);
+    session.Store(user);
+
+    await session.SaveChangesAsync(cancellationToken);
+    user.ClearEventsOnceCommitted();
+});
+
+app.MapGet("/users-projection", async ([FromServices] IQuerySession session, 
+    CancellationToken cancellationToken) =>
 {
     return await session.Query<UserSummaryView>()
         .OrderBy(_ => _.LastName)
@@ -80,25 +98,9 @@ app.MapGet("/users-aggregates", async ([FromServices] IDocumentSession session, 
     return users;
 });
 
-
-
 app.MapGet("/user", async ([FromServices] IDocumentSession session, Guid userId, CancellationToken ct) =>
 {
     return await session.Events.AggregateStreamAsync<User>(userId,token: ct);
-});
-
-app.MapPost("/update", async (UpdateUserRequest updatedUser, [FromServices] IDocumentSession session, CancellationToken cancellationToken) =>
-{
-    var user = await session.Events.AggregateStreamAsync<User>(updatedUser.Id, token: cancellationToken);
-
-    user?.ChangeName(updatedUser.FirstName, updatedUser.LastName);
-
-    var events = user?.EventsToCommit.ToArray();
-    session.Events.Append(user.Id, user.Version, events);
-    session.Store(user);
-
-    await session.SaveChangesAsync(cancellationToken);
-    user.ClearEventsOnceCommitted();
 });
 
 app.MapGet("/user-events", async ([FromServices] IDocumentSession session, Guid userId, CancellationToken cancellationToken) =>

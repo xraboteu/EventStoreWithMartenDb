@@ -1,4 +1,4 @@
-public class UserCreated
+public class UserRegistered
 {
     public Guid Id { get; set; }
     public string FirstName { get; set; }
